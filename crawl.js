@@ -20,7 +20,7 @@ async function politePause(baseMs = SLEEP_MS) {
 }
 
 function ua() {
-  return "ErusianTracker/3.5 (+GitHub Actions; correct reply vs thread IDs)";
+  return "ErusianTracker/3.6 (+GitHub Actions; correct thread vs reply IDs)";
 }
 
 async function fetchWithRetry(url, { accept, kind }) {
@@ -89,6 +89,7 @@ function htmlToTextPreserveFormatting(htmlOrText) {
 
   const s = String(htmlOrText);
 
+  // If it doesn't look like HTML, keep as text (preserve newlines)
   if (!/[<][a-z!/]/i.test(s)) {
     const lines = s.replace(/\r/g, "").split("\n").map(normalizeLine);
     return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
@@ -105,6 +106,7 @@ function htmlToTextPreserveFormatting(htmlOrText) {
       .split("\n")
       .map((l) => l.replace(/[ \t]+/g, " ").trim())
       .filter((l) => l.length > 0);
+
     const quoted = lines.map((l) => `> ${l}`).join("\n");
     $(bq).replaceWith(`\n\n${quoted}\n\n`);
   });
@@ -189,26 +191,6 @@ function getLikeCount(comment) {
   return Number.isFinite(n) ? n : 0;
 }
 
-/**
- * IMPORTANT: Substack sometimes uses:
- * - c.id = thread/top-level comment id (works with /comment/<id>)
- * - c.comment_id or c.commentId = actual comment/reply id (works with ?commentId=...)
- *
- * So: prefer comment_id/commentId for the specific comment id.
- */
-function getSpecificCommentId(c) {
-  return c?.comment_id ?? c?.commentId ?? c?.id ?? null;
-}
-
-function getThreadId(c) {
-  // Prefer c.id as the thread/root id. If missing, fall back.
-  return c?.id ?? c?.root_comment_id ?? c?.rootCommentId ?? c?.comment_id ?? c?.commentId ?? null;
-}
-
-/**
- * Flatten and infer parent pointers from nesting, so replies get included.
- * Returns flat list.
- */
 function flattenComments(nodeOrList) {
   const out = [];
   const stack = Array.isArray(nodeOrList) ? [...nodeOrList] : [nodeOrList];
@@ -225,6 +207,27 @@ function flattenComments(nodeOrList) {
     }
   }
   return out;
+}
+
+/**
+ * Key fix:
+ * - For replies, Substack often provides:
+ *   - comment_id / commentId = the specific reply id (what you want for "comment link")
+ *   - id = the top-level thread id (what you want for "top-level")
+ * - For top-level comments, comment_id is usually missing, and id is the comment id.
+ */
+function getSpecificCommentId(c) {
+  return c?.comment_id ?? c?.commentId ?? c?.id ?? null;
+}
+
+function getTopLevelCommentId(c) {
+  // "id" is the thread id when comment_id exists; otherwise it's just the comment id.
+  return c?.id ?? c?.comment_id ?? c?.commentId ?? null;
+}
+
+function buildCommentPageUrl(postUrl, commentId) {
+  if (!commentId) return null;
+  return `${postUrl.replace(/\/+$/, "")}/comment/${encodeURIComponent(commentId)}`;
 }
 
 async function listPostsFromArchive(baseUrl, maxPosts) {
@@ -269,18 +272,6 @@ async function getAllCommentsForPostId(postId) {
   return [];
 }
 
-function buildReplyUrl(postUrl, specificCommentId) {
-  if (!specificCommentId) return null;
-  // This is the "direct to commentId" style link, similar to what Substack shares.
-  // It still loads the post page, but scrolls to the comment directly.
-  return `${postUrl}?commentId=${encodeURIComponent(specificCommentId)}&comments=true`;
-}
-
-function buildThreadUrl(postUrl, threadId) {
-  if (!threadId) return null;
-  return `${postUrl.replace(/\/+$/, "")}/comment/${encodeURIComponent(threadId)}`;
-}
-
 async function crawl() {
   console.log(`Substack: ${SUBSTACK_URL}`);
   console.log(`User: ${wantedName} (handle match: @${wantedHandle})`);
@@ -319,21 +310,21 @@ async function crawl() {
         const text = getBodyText(c);
         if (!text) continue;
 
-        const specificCommentId = getSpecificCommentId(c);
-        const threadId = getThreadId(c);
+        const commentId = getSpecificCommentId(c);
+        const topLevelCommentId = getTopLevelCommentId(c);
 
         out.push({
           postUrl: post.url,
           postTitle: post.title,
           postId,
 
-          // Keep both IDs explicitly
-          commentId: specificCommentId,
-          threadId: threadId,
+          // IDs (handy for debugging)
+          commentId,
+          topLevelCommentId,
 
-          // Links
-          commentUrl: buildReplyUrl(post.url, specificCommentId),
-          topLevelCommentUrl: buildThreadUrl(post.url, threadId),
+          // Links (both fast "slashy" comment pages)
+          commentUrl: buildCommentPageUrl(post.url, commentId),
+          topLevelCommentUrl: buildCommentPageUrl(post.url, topLevelCommentId),
 
           commentDateMs: getCommentDateMs(c),
           likes: getLikeCount(c),
@@ -369,7 +360,7 @@ async function crawl() {
     rows: deduped
   };
 
-  fs.mkdirSync(path.dirname("docs/data/comments.json"), { recursive: true });
+  fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2), "utf8");
 
   console.log(`Wrote ${deduped.length} comments to ${OUT_PATH}`);

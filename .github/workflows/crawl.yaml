@@ -1,6 +1,11 @@
 name: Crawl Substack user comments
 
 on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - "docs/data/comments.json"
+
   workflow_dispatch:
     inputs:
       substackUrl:
@@ -19,6 +24,7 @@ on:
         description: "Delay between requests (ms)"
         required: true
         default: "500"
+
   schedule:
     # Every day at 5:00 a.m. PST (UTC-8) == 13:00 UTC
     - cron: "0 13 * * *"
@@ -28,6 +34,8 @@ permissions:
 
 jobs:
   crawl:
+    # Extra safety: don't run on the workflow's own commit/push
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
