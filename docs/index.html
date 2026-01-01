@@ -14,7 +14,7 @@
     .meta { font-size:12px; opacity:.75; }
     .top { display:flex; justify-content:space-between; gap:12px; }
     code { background:#f5f5f5; padding:2px 6px; border-radius:6px; }
-    .links a { margin-left: 10px; }
+    .links a { margin-left: 10px; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -29,8 +29,6 @@
       <select id="sort">
         <option value="comment_newest">Comment date: newest</option>
         <option value="comment_oldest">Comment date: oldest</option>
-        <option value="post_newest">Post date: newest</option>
-        <option value="post_oldest">Post date: oldest</option>
         <option value="likes_desc">Likes: high → low</option>
         <option value="likes_asc">Likes: low → high</option>
         <option value="length_desc">Length: long → short</option>
@@ -72,8 +70,6 @@ function sortRows(rows, mode){
   const by = {
     comment_newest: (a,b) => (b.commentDateMs||0) - (a.commentDateMs||0),
     comment_oldest: (a,b) => (a.commentDateMs||0) - (b.commentDateMs||0),
-    post_newest: (a,b) => (b.postDateMs||0) - (a.postDateMs||0) || ((b.commentDateMs||0)-(a.commentDateMs||0)),
-    post_oldest: (a,b) => (a.postDateMs||0) - (b.postDateMs||0) || ((b.commentDateMs||0)-(a.commentDateMs||0)),
     likes_desc: (a,b) => (b.likes||0) - (a.likes||0) || ((b.commentDateMs||0)-(a.commentDateMs||0)),
     likes_asc: (a,b) => (a.likes||0) - (b.likes||0) || ((b.commentDateMs||0)-(a.commentDateMs||0)),
     length_desc: (a,b) => (b.text?.length||0) - (a.text?.length||0),
@@ -117,14 +113,13 @@ function render(limit){
     const postTitle = esc(r.postTitle || "(untitled)");
     const postUrl = esc(r.postUrl);
 
+    // IMPORTANT: use URLs from JSON; do NOT construct slow links
+    const commentUrl = r.commentUrl || null;
+    const topUrl = r.topLevelCommentUrl || null;
+
     const links = [];
-    if (r.commentUrl) {
-      links.push(`<a target="_blank" rel="noreferrer" href="${esc(r.commentUrl)}">comment link</a>`);
-    }
-    // NEW: show top-level link when it's different from the comment link
-    if (r.topLevelCommentUrl && (!r.commentUrl || r.topLevelCommentUrl !== r.commentUrl)) {
-      links.push(`<a target="_blank" rel="noreferrer" href="${esc(r.topLevelCommentUrl)}">top-level</a>`);
-    }
+    if (commentUrl) links.push(`<a target="_blank" rel="noreferrer" href="${esc(commentUrl)}">comment</a>`);
+    if (topUrl && topUrl !== commentUrl) links.push(`<a target="_blank" rel="noreferrer" href="${esc(topUrl)}">top-level</a>`);
 
     const linksHtml = links.length ? `<span class="links">${links.join("")}</span>` : "";
 
@@ -178,7 +173,8 @@ async function boot(){
     const r = await fetch("./data/comments.json", { cache: "no-store" });
     if (!r.ok) throw new Error("comments.json not found yet — run the GitHub Action once.");
     data = await r.json();
-    el("about").innerHTML = `Data for <code>${esc(data.substackUrl)}</code> user <code>${esc(data.username)}</code> • generated <code>${esc(data.generatedAt)}</code> • count <code>${data.count}</code>`;
+    el("about").innerHTML =
+      `Data for <code>${esc(data.substackUrl)}</code> user <code>${esc(data.username)}</code> • generated <code>${esc(data.generatedAt)}</code> • count <code>${data.count}</code>`;
     filtered = data.rows || [];
     apply();
   } catch(e){

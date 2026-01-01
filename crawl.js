@@ -20,44 +20,38 @@ async function politePause(baseMs = SLEEP_MS) {
 }
 
 function ua() {
-  return "ErusianTracker/3.6 (+GitHub Actions; correct thread vs reply IDs)";
+  return "ErusianTracker/3.7 (+GitHub Actions; robust top-level detection)";
 }
 
 async function fetchWithRetry(url, { accept, kind }) {
   const MAX_RETRIES = 10;
-
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const r = await fetch(url, { headers: { accept, "user-agent": ua() } });
-
     if (r.ok) return r;
 
     if (r.status === 429) {
-      const retryAfter = r.headers.get("retry-after");
-      const retryAfterMs = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : 0;
-
-      const backoffMs = Math.min(120_000, 1000 * Math.pow(2, attempt));
-      const jitterMs = Math.floor(Math.random() * 800);
-      const waitMs = Math.max(retryAfterMs, backoffMs) + jitterMs;
-
-      console.log(`429 (${kind}) ${url} — wait ${waitMs}ms`);
-      await sleep(waitMs);
+      const ra = r.headers.get("retry-after");
+      const raMs = ra && /^\d+$/.test(ra) ? Number(ra) * 1000 : 0;
+      const backoff = Math.min(120_000, 1000 * Math.pow(2, attempt));
+      const jitter = Math.floor(Math.random() * 800);
+      const wait = Math.max(raMs, backoff) + jitter;
+      console.log(`429 (${kind}) ${url} — wait ${wait}ms`);
+      await sleep(wait);
       continue;
     }
 
     if (r.status >= 500 && r.status < 600 && attempt < MAX_RETRIES) {
-      const backoffMs = Math.min(60_000, 800 * Math.pow(2, attempt));
-      const jitterMs = Math.floor(Math.random() * 600);
-      const waitMs = backoffMs + jitterMs;
-
-      console.log(`HTTP ${r.status} (${kind}) ${url} — retry in ${waitMs}ms`);
-      await sleep(waitMs);
+      const backoff = Math.min(60_000, 800 * Math.pow(2, attempt));
+      const jitter = Math.floor(Math.random() * 600);
+      const wait = backoff + jitter;
+      console.log(`HTTP ${r.status} (${kind}) ${url} — retry in ${wait}ms`);
+      await sleep(wait);
       continue;
     }
 
     const text = await r.text().catch(() => "");
     throw new Error(`HTTP ${r.status} (${kind}) for ${url}${text ? ` — ${text.slice(0, 200)}` : ""}`);
   }
-
   throw new Error(`Retries exhausted (${kind}) for ${url}`);
 }
 
@@ -86,10 +80,8 @@ function normalizeLine(line) {
 
 function htmlToTextPreserveFormatting(htmlOrText) {
   if (!htmlOrText) return "";
-
   const s = String(htmlOrText);
 
-  // If it doesn't look like HTML, keep as text (preserve newlines)
   if (!/[<][a-z!/]/i.test(s)) {
     const lines = s.replace(/\r/g, "").split("\n").map(normalizeLine);
     return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
@@ -102,12 +94,8 @@ function htmlToTextPreserveFormatting(htmlOrText) {
 
   root.find("blockquote").each((_, bq) => {
     const raw = $(bq).text().replace(/\r/g, "");
-    const lines = raw
-      .split("\n")
-      .map((l) => l.replace(/[ \t]+/g, " ").trim())
-      .filter((l) => l.length > 0);
-
-    const quoted = lines.map((l) => `> ${l}`).join("\n");
+    const lines = raw.split("\n").map(l => l.replace(/[ \t]+/g, " ").trim()).filter(Boolean);
+    const quoted = lines.map(l => `> ${l}`).join("\n");
     $(bq).replaceWith(`\n\n${quoted}\n\n`);
   });
 
@@ -116,118 +104,114 @@ function htmlToTextPreserveFormatting(htmlOrText) {
   if (blocks.length) {
     blocks.each((_, el) => {
       const t = $(el).text().replace(/\r/g, "");
-      const cleaned = t
-        .split("\n")
-        .map((l) => l.replace(/[ \t]+/g, " ").trim())
-        .filter((l) => l.length > 0)
-        .join("\n");
+      const cleaned = t.split("\n").map(l => l.replace(/[ \t]+/g, " ").trim()).filter(Boolean).join("\n");
       if (cleaned) out.push(cleaned);
     });
   } else {
     const raw = root.text().replace(/\r/g, "");
-    const cleaned = raw
-      .split("\n")
-      .map((l) => l.replace(/[ \t]+/g, " ").trim())
-      .join("\n");
+    const cleaned = raw.split("\n").map(l => l.replace(/[ \t]+/g, " ").trim()).join("\n");
     if (cleaned.trim()) out.push(cleaned);
   }
 
-  let text = out.join("\n\n");
-  text = text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  return text;
+  return out.join("\n\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function getAuthorName(comment) {
-  return (
-    comment?.user?.name ||
-    comment?.user?.profile?.name ||
-    comment?.user_name ||
-    comment?.commenter_name ||
-    comment?.name ||
-    ""
-  );
+function getAuthorName(c) {
+  return c?.user?.name || c?.user?.profile?.name || c?.user_name || c?.commenter_name || c?.name || "";
 }
-
-function getAuthorHandle(comment) {
-  return (
-    comment?.user?.handle ||
-    comment?.user?.username ||
-    comment?.user?.slug ||
-    comment?.handle ||
-    ""
-  );
+function getAuthorHandle(c) {
+  return c?.user?.handle || c?.user?.username || c?.user?.slug || c?.handle || "";
 }
-
-function getBodyText(comment) {
-  const html = comment?.body_html || comment?.body || comment?.text || "";
-  return htmlToTextPreserveFormatting(html);
+function getBodyText(c) {
+  return htmlToTextPreserveFormatting(c?.body_html || c?.body || c?.text || "");
 }
-
-function getCommentDateMs(comment) {
-  const dt =
-    comment?.date ||
-    comment?.created_at ||
-    comment?.createdAt ||
-    comment?.published_at ||
-    comment?.posted_at ||
-    null;
-
+function getCommentDateMs(c) {
+  const dt = c?.date || c?.created_at || c?.createdAt || c?.published_at || c?.posted_at || null;
   if (!dt) return null;
-
-  if (typeof dt === "number") {
-    const ms = dt > 10_000_000_000 ? dt : dt * 1000;
-    return Number.isFinite(ms) ? ms : null;
-  }
-
+  if (typeof dt === "number") return (dt > 10_000_000_000 ? dt : dt * 1000);
   const ms = Date.parse(String(dt));
   return Number.isFinite(ms) ? ms : null;
 }
-
-function getLikeCount(comment) {
-  const a = comment?.reactions?.like;
-  const b = comment?.like_count;
-  const c = comment?.likes;
-  const n = Number(a ?? b ?? c ?? 0);
+function getLikeCount(c) {
+  const n = Number(c?.reactions?.like ?? c?.like_count ?? c?.likes ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
 
-function flattenComments(nodeOrList) {
-  const out = [];
-  const stack = Array.isArray(nodeOrList) ? [...nodeOrList] : [nodeOrList];
+function getReplyId(c) {
+  // “specific comment id” (reply id)
+  return c?.comment_id ?? c?.commentId ?? null;
+}
+function getObjectId(c) {
+  // “id” field (sometimes equals top-level thread id, sometimes equals comment id)
+  return c?.id ?? null;
+}
 
-  while (stack.length) {
-    const c = stack.pop();
-    if (!c || typeof c !== "object") continue;
-
-    out.push(c);
-
-    const kids = c.children || c.replies || c.responses || c.thread || c.comments || null;
-    if (Array.isArray(kids) && kids.length) {
-      for (const k of kids) stack.push(k);
-    }
-  }
-  return out;
+function buildCommentPageUrl(postUrl, id) {
+  if (!id) return null;
+  return `${postUrl.replace(/\/+$/, "")}/comment/${encodeURIComponent(id)}`;
 }
 
 /**
- * Key fix:
- * - For replies, Substack often provides:
- *   - comment_id / commentId = the specific reply id (what you want for "comment link")
- *   - id = the top-level thread id (what you want for "top-level")
- * - For top-level comments, comment_id is usually missing, and id is the comment id.
+ * Flatten nested threads AND record parent relationships using reply IDs.
+ * parentBy maps replyId -> parentReplyId (or null for roots).
  */
-function getSpecificCommentId(c) {
-  return c?.comment_id ?? c?.commentId ?? c?.id ?? null;
+function flattenWithParents(rootList) {
+  const flat = [];
+  const parentBy = new Map();
+
+  const stack = [];
+  for (const c of (Array.isArray(rootList) ? rootList : [rootList])) {
+    if (c) stack.push({ c, parentReplyId: null });
+  }
+
+  while (stack.length) {
+    const { c, parentReplyId } = stack.pop();
+    if (!c || typeof c !== "object") continue;
+
+    flat.push(c);
+
+    const rid = getReplyId(c) ?? getObjectId(c);
+    if (rid != null && !parentBy.has(String(rid))) {
+      parentBy.set(String(rid), parentReplyId);
+    }
+
+    const kids = c.children || c.replies || c.responses || c.thread || c.comments || null;
+    if (Array.isArray(kids) && kids.length) {
+      const thisRid = rid ?? parentReplyId;
+      for (const k of kids) stack.push({ c: k, parentReplyId: thisRid ?? null });
+    }
+  }
+
+  return { flat, parentBy };
 }
 
-function getTopLevelCommentId(c) {
-  // "id" is the thread id when comment_id exists; otherwise it's just the comment id.
-  return c?.id ?? c?.comment_id ?? c?.commentId ?? null;
-}
+/**
+ * Determine:
+ * - commentId (specific reply) = replyId if present else objectId
+ * - topLevelCommentId (thread root) = objectId IF it differs from commentId
+ *   else compute by walking parents to root (fallback)
+ */
+function computeIds(c, parentBy) {
+  const commentId = getReplyId(c) ?? getObjectId(c);
+  const objectId = getObjectId(c);
 
-function buildCommentPageUrl(postUrl, commentId) {
-  if (!commentId) return null;
-  return `${postUrl.replace(/\/+$/, "")}/comment/${encodeURIComponent(commentId)}`;
+  // Best case: objectId is clearly a different “thread id” than the reply id
+  if (commentId != null && objectId != null && String(objectId) !== String(commentId)) {
+    return { commentId, topLevelCommentId: objectId };
+  }
+
+  // Otherwise: walk parent chain (using reply ids) to find the root reply
+  if (commentId == null) return { commentId: null, topLevelCommentId: null };
+
+  let cur = String(commentId);
+  let safety = 0;
+  while (safety++ < 500) {
+    const pid = parentBy.get(cur);
+    if (!pid) break;
+    cur = String(pid);
+  }
+
+  return { commentId, topLevelCommentId: cur };
 }
 
 async function listPostsFromArchive(baseUrl, maxPosts) {
@@ -251,7 +235,6 @@ async function listPostsFromArchive(baseUrl, maxPosts) {
     offset += chunk.length;
     await politePause(SLEEP_MS);
   }
-
   return posts;
 }
 
@@ -283,10 +266,9 @@ async function crawl() {
 
   const out = [];
 
-  let idx = 0;
-  for (const post of posts) {
-    idx++;
-    console.log(`Scanning post ${idx}/${posts.length}: ${post.url}`);
+  for (let idx = 0; idx < posts.length; idx++) {
+    const post = posts[idx];
+    console.log(`Scanning post ${idx + 1}/${posts.length}: ${post.url}`);
 
     const slug = slugFromPostUrl(post.url);
     if (!slug) continue;
@@ -295,34 +277,31 @@ async function crawl() {
       const postId = await getPostIdFromSlug(slug);
       if (!postId) continue;
 
-      const commentsTree = await getAllCommentsForPostId(postId);
-      const comments = flattenComments(commentsTree);
+      const tree = await getAllCommentsForPostId(postId);
+      const { flat, parentBy } = flattenWithParents(tree);
 
-      let matchedThisPost = 0;
+      let matched = 0;
 
-      for (const c of comments) {
+      for (const c of flat) {
         const name = normalizeTextOneLine(getAuthorName(c));
         const handle = normalizeTextOneLine(getAuthorHandle(c)).toLowerCase().replace(/^@/, "");
-
-        const matches = name === wantedName || (handle && handle === wantedHandle);
-        if (!matches) continue;
+        const isMatch = name === wantedName || (handle && handle === wantedHandle);
+        if (!isMatch) continue;
 
         const text = getBodyText(c);
         if (!text) continue;
 
-        const commentId = getSpecificCommentId(c);
-        const topLevelCommentId = getTopLevelCommentId(c);
+        const { commentId, topLevelCommentId } = computeIds(c, parentBy);
 
         out.push({
           postUrl: post.url,
           postTitle: post.title,
           postId,
 
-          // IDs (handy for debugging)
           commentId,
           topLevelCommentId,
 
-          // Links (both fast "slashy" comment pages)
+          // Both “slashy” pages (fast)
           commentUrl: buildCommentPageUrl(post.url, commentId),
           topLevelCommentUrl: buildCommentPageUrl(post.url, topLevelCommentId),
 
@@ -331,10 +310,10 @@ async function crawl() {
           text
         });
 
-        matchedThisPost++;
+        matched++;
       }
 
-      console.log(`  Found ${matchedThisPost} matching comments (including replies)`);
+      console.log(`  Found ${matched} matching comments`);
     } catch (e) {
       console.log(`  Skip due to error: ${String(e?.message ?? e)}`);
     }
@@ -362,7 +341,6 @@ async function crawl() {
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2), "utf8");
-
   console.log(`Wrote ${deduped.length} comments to ${OUT_PATH}`);
 }
 
