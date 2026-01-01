@@ -20,7 +20,7 @@ async function politePause(baseMs = SLEEP_MS) {
 }
 
 function ua() {
-  return "ErusianTracker/3.2 (+GitHub Actions; comments JSON + replies + formatting)";
+  return "ErusianTracker/3.3 (+GitHub Actions; top-level comment links)";
 }
 
 async function fetchWithRetry(url, { accept, kind }) {
@@ -28,10 +28,7 @@ async function fetchWithRetry(url, { accept, kind }) {
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const r = await fetch(url, {
-      headers: {
-        accept,
-        "user-agent": ua()
-      }
+      headers: { accept, "user-agent": ua() }
     });
 
     if (r.ok) return r;
@@ -81,19 +78,15 @@ function slugFromPostUrl(postUrl) {
   }
 }
 
+function normalizeTextOneLine(s) {
+  return (s || "").replace(/\s+/g, " ").trim();
+}
+
 // Keep spaces sane but DO NOT destroy newlines
 function normalizeLine(line) {
   return (line || "").replace(/[ \t]+/g, " ").trimEnd();
 }
 
-/**
- * Convert Substack body_html into a readable plaintext that preserves:
- * - paragraphs as blank lines
- * - blockquotes as "> " lines (and keeps blank lines around them)
- * - <br> as line breaks
- *
- * If the input is already plaintext (no "<"), we keep its newlines as-is.
- */
 function htmlToTextPreserveFormatting(htmlOrText) {
   if (!htmlOrText) return "";
 
@@ -120,14 +113,10 @@ function htmlToTextPreserveFormatting(htmlOrText) {
       .filter((l) => l.length > 0);
 
     const quoted = lines.map((l) => `> ${l}`).join("\n");
-    // Surround with blank lines so it reads like Markdown-ish text
     $(bq).replaceWith(`\n\n${quoted}\n\n`);
   });
 
-  // Convert paragraphs and list items into separated lines
   const out = [];
-
-  // Prefer explicit blocks: p, li, headings; otherwise fallback to text
   const blocks = root.find("p, li, h1, h2, h3, h4, h5, h6");
   if (blocks.length) {
     blocks.each((_, el) => {
@@ -140,7 +129,6 @@ function htmlToTextPreserveFormatting(htmlOrText) {
       if (cleaned) out.push(cleaned);
     });
   } else {
-    // Fallback: just take the root text, but preserve newlines we injected from <br>/<blockquote>
     const raw = root.text().replace(/\r/g, "");
     const cleaned = raw
       .split("\n")
@@ -150,8 +138,6 @@ function htmlToTextPreserveFormatting(htmlOrText) {
   }
 
   let text = out.join("\n\n");
-
-  // Cleanup: collapse excessive blank lines, trim
   text = text
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
@@ -198,12 +184,20 @@ function getCommentDateMs(comment) {
   if (!dt) return null;
 
   if (typeof dt === "number") {
-    const ms = dt > 10_000_000_000 ? dt : dt * 1000; // seconds -> ms
+    const ms = dt > 10_000_000_000 ? dt : dt * 1000;
     return Number.isFinite(ms) ? ms : null;
   }
 
   const ms = Date.parse(String(dt));
   return Number.isFinite(ms) ? ms : null;
+}
+
+function getLikeCount(comment) {
+  const a = comment?.reactions?.like;
+  const b = comment?.like_count;
+  const c = comment?.likes;
+  const n = Number(a ?? b ?? c ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
 // Flatten threaded trees so replies get included
@@ -231,6 +225,45 @@ function flattenComments(nodeOrList) {
   }
 
   return out;
+}
+
+// ---- NEW: parent/top-level resolution ----
+function getCommentId(c) {
+  return c?.id ?? c?.comment_id ?? c?.commentId ?? null;
+}
+
+function getParentId(c) {
+  // Substack variants / different payload shapes
+  return (
+    c?.parent_id ??
+    c?.parentId ??
+    c?.parent_comment_id ??
+    c?.parentCommentId ??
+    c?.reply_to_comment_id ??
+    c?.replyToCommentId ??
+    c?.in_reply_to ??
+    c?.inReplyTo ??
+    null
+  );
+}
+
+function computeTopLevelId(comment, idToComment) {
+  let cur = comment;
+  let safety = 0;
+
+  while (cur && safety++ < 200) {
+    const pid = getParentId(cur);
+    if (!pid) break;
+
+    const parent = idToComment.get(String(pid));
+    if (!parent) {
+      // parent not present in this payload; best-effort: stop here
+      break;
+    }
+    cur = parent;
+  }
+
+  return getCommentId(cur) ?? getCommentId(comment) ?? null;
 }
 
 async function listPostsFromArchive(baseUrl, maxPosts) {
@@ -268,9 +301,7 @@ async function getPostIdFromSlug(slug) {
   const id = meta?.id || meta?.post?.id || meta?.post_id || meta?.postId || null;
 
   if (!id) {
-    console.log(
-      `Could not find post id in ${metaUrl}. Top keys: ${Object.keys(meta || {}).slice(0, 30).join(", ")}`
-    );
+    console.log(`Could not find post id in ${metaUrl}. Top keys: ${Object.keys(meta || {}).slice(0, 30).join(", ")}`);
     return null;
   }
   return id;
@@ -285,18 +316,6 @@ async function getAllCommentsForPostId(postId) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.comments)) return data.comments;
   return [];
-}
-
-function getLikeCount(comment) {
-  const a = comment?.reactions?.like;
-  const b = comment?.like_count;
-  const c = comment?.likes;
-  const n = Number(a ?? b ?? c ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function normalizeText(s) {
-  return (s || "").replace(/\s+/g, " ").trim();
 }
 
 async function crawl() {
@@ -331,11 +350,18 @@ async function crawl() {
       const commentsTree = await getAllCommentsForPostId(postId);
       const comments = flattenComments(commentsTree);
 
+      // Build id->comment map for top-level resolution
+      const idToComment = new Map();
+      for (const c of comments) {
+        const id = getCommentId(c);
+        if (id != null) idToComment.set(String(id), c);
+      }
+
       let matchedThisPost = 0;
 
       for (const c of comments) {
-        const name = normalizeText(getAuthorName(c));
-        const handle = normalizeText(getAuthorHandle(c)).toLowerCase().replace(/^@/, "");
+        const name = normalizeTextOneLine(getAuthorName(c));
+        const handle = normalizeTextOneLine(getAuthorHandle(c)).toLowerCase().replace(/^@/, "");
 
         const matches = name === wantedName || (handle && handle === wantedHandle);
         if (!matches) continue;
@@ -343,8 +369,13 @@ async function crawl() {
         const text = getBodyText(c);
         if (!text) continue;
 
-        const commentId = c?.id || c?.comment_id || c?.commentId || null;
+        const commentId = getCommentId(c);
         const commentUrl = commentId ? `${post.url.replace(/\/+$/, "")}/comment/${commentId}` : null;
+
+        const topLevelCommentId = computeTopLevelId(c, idToComment);
+        const topLevelCommentUrl = topLevelCommentId
+          ? `${post.url.replace(/\/+$/, "")}/comment/${topLevelCommentId}`
+          : null;
 
         out.push({
           postUrl: post.url,
@@ -352,6 +383,8 @@ async function crawl() {
           postId,
           commentId,
           commentUrl,
+          topLevelCommentId,
+          topLevelCommentUrl,
           commentDateMs: getCommentDateMs(c),
           likes: getLikeCount(c),
           text

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Erusian Tracker</title>
+  <title>Substack Comment Finder</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; max-width: 1100px; }
     .row { display:flex; flex-wrap: wrap; gap: 12px; align-items: end; }
@@ -14,10 +14,11 @@
     .meta { font-size:12px; opacity:.75; }
     .top { display:flex; justify-content:space-between; gap:12px; }
     code { background:#f5f5f5; padding:2px 6px; border-radius:6px; }
+    .links a { margin-left: 10px; }
   </style>
 </head>
 <body>
-  <h1>Erusian Tracker</h1>
+  <h1>Substack Comment Finder</h1>
   <div class="meta" id="about"></div>
 
   <div class="row" style="margin-top:12px;">
@@ -115,15 +116,26 @@ function render(limit){
   el("results").innerHTML = slice.map(r => {
     const postTitle = esc(r.postTitle || "(untitled)");
     const postUrl = esc(r.postUrl);
-    const commentUrl = r.commentUrl ? `<a target="_blank" rel="noreferrer" href="${esc(r.commentUrl)}">comment link</a>` : "";
+
+    const links = [];
+    if (r.commentUrl) {
+      links.push(`<a target="_blank" rel="noreferrer" href="${esc(r.commentUrl)}">comment link</a>`);
+    }
+    // NEW: show top-level link when it's different from the comment link
+    if (r.topLevelCommentUrl && (!r.commentUrl || r.topLevelCommentUrl !== r.commentUrl)) {
+      links.push(`<a target="_blank" rel="noreferrer" href="${esc(r.topLevelCommentUrl)}">top-level</a>`);
+    }
+
+    const linksHtml = links.length ? `<span class="links">${links.join("")}</span>` : "";
+
     return `
       <div class="card">
         <div class="top">
           <div>
             <div><b>${postTitle}</b> — <a target="_blank" rel="noreferrer" href="${postUrl}">open post</a></div>
-            <div class="meta">Post: ${fmt(r.postDateMs)} | Comment: ${fmt(r.commentDateMs)} | 👍 ${r.likes||0}</div>
+            <div class="meta">Comment: ${fmt(r.commentDateMs)} | 👍 ${r.likes||0}</div>
           </div>
-          <div class="meta" style="text-align:right">${commentUrl}</div>
+          <div class="meta" style="text-align:right">${linksHtml}</div>
         </div>
         <div style="white-space:pre-wrap;margin-top:8px;">${esc(r.text||"")}</div>
       </div>
@@ -135,17 +147,17 @@ function exportCsvCurrentPage(){
   const limit = Number(el("limit").value);
   const rows = filtered.slice(offset, offset + limit);
 
-  const header = ["postTitle","postUrl","postDate","commentDate","likes","commentUrl","text"];
+  const header = ["postTitle","postUrl","commentDate","likes","commentUrl","topLevelCommentUrl","text"];
   const lines = [header.join(",")];
 
   for (const r of rows){
     const vals = [
       r.postTitle || "",
       r.postUrl || "",
-      r.postDateMs ? new Date(r.postDateMs).toISOString() : "",
       r.commentDateMs ? new Date(r.commentDateMs).toISOString() : "",
       String(r.likes || 0),
       r.commentUrl || "",
+      r.topLevelCommentUrl || "",
       (r.text || "").replaceAll("\r"," ").replaceAll("\n"," ")
     ].map(v => `"${String(v).replaceAll('"','""')}"`);
     lines.push(vals.join(","));
