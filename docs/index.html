@@ -19,6 +19,10 @@
 </head>
 <body>
   <h1>Erusian Tracker</h1>
+  <div class="meta" style="margin-top:-6px; margin-bottom:10px;">
+    Tracks posts of the highly knowledgeable and insightful Astral Codex Ten poster Erusian
+  </div>
+
   <div class="meta" id="about"></div>
 
   <div class="row" style="margin-top:12px;">
@@ -113,7 +117,6 @@ function render(limit){
     const postTitle = esc(r.postTitle || "(untitled)");
     const postUrl = esc(r.postUrl);
 
-    // IMPORTANT: Use URLs from JSON; do NOT construct slow links
     const commentUrl = r.commentUrl || null;
     const parentUrl = r.parentCommentUrl || null;
     const topUrl = r.topLevelCommentUrl || null;
