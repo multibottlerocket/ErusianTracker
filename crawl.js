@@ -20,16 +20,14 @@ async function politePause(baseMs = SLEEP_MS) {
 }
 
 function ua() {
-  return "ErusianTracker/3.3 (+GitHub Actions; top-level comment links)";
+  return "ErusianTracker/3.5 (+GitHub Actions; correct reply vs thread IDs)";
 }
 
 async function fetchWithRetry(url, { accept, kind }) {
   const MAX_RETRIES = 10;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const r = await fetch(url, {
-      headers: { accept, "user-agent": ua() }
-    });
+    const r = await fetch(url, { headers: { accept, "user-agent": ua() } });
 
     if (r.ok) return r;
 
@@ -82,7 +80,6 @@ function normalizeTextOneLine(s) {
   return (s || "").replace(/\s+/g, " ").trim();
 }
 
-// Keep spaces sane but DO NOT destroy newlines
 function normalizeLine(line) {
   return (line || "").replace(/[ \t]+/g, " ").trimEnd();
 }
@@ -92,7 +89,6 @@ function htmlToTextPreserveFormatting(htmlOrText) {
 
   const s = String(htmlOrText);
 
-  // If it doesn't look like HTML, keep as text (preserve newlines)
   if (!/[<][a-z!/]/i.test(s)) {
     const lines = s.replace(/\r/g, "").split("\n").map(normalizeLine);
     return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
@@ -101,17 +97,14 @@ function htmlToTextPreserveFormatting(htmlOrText) {
   const $ = cheerio.load(`<div id="x">${s}</div>`, { decodeEntities: true });
   const root = $("#x");
 
-  // Convert <br> to literal newlines
   root.find("br").replaceWith("\n");
 
-  // Convert blockquotes to lines prefixed by "> "
   root.find("blockquote").each((_, bq) => {
     const raw = $(bq).text().replace(/\r/g, "");
     const lines = raw
       .split("\n")
       .map((l) => l.replace(/[ \t]+/g, " ").trim())
       .filter((l) => l.length > 0);
-
     const quoted = lines.map((l) => `> ${l}`).join("\n");
     $(bq).replaceWith(`\n\n${quoted}\n\n`);
   });
@@ -138,11 +131,7 @@ function htmlToTextPreserveFormatting(htmlOrText) {
   }
 
   let text = out.join("\n\n");
-  text = text
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-
+  text = text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   return text;
 }
 
@@ -200,7 +189,26 @@ function getLikeCount(comment) {
   return Number.isFinite(n) ? n : 0;
 }
 
-// Flatten threaded trees so replies get included
+/**
+ * IMPORTANT: Substack sometimes uses:
+ * - c.id = thread/top-level comment id (works with /comment/<id>)
+ * - c.comment_id or c.commentId = actual comment/reply id (works with ?commentId=...)
+ *
+ * So: prefer comment_id/commentId for the specific comment id.
+ */
+function getSpecificCommentId(c) {
+  return c?.comment_id ?? c?.commentId ?? c?.id ?? null;
+}
+
+function getThreadId(c) {
+  // Prefer c.id as the thread/root id. If missing, fall back.
+  return c?.id ?? c?.root_comment_id ?? c?.rootCommentId ?? c?.comment_id ?? c?.commentId ?? null;
+}
+
+/**
+ * Flatten and infer parent pointers from nesting, so replies get included.
+ * Returns flat list.
+ */
 function flattenComments(nodeOrList) {
   const out = [];
   const stack = Array.isArray(nodeOrList) ? [...nodeOrList] : [nodeOrList];
@@ -211,59 +219,12 @@ function flattenComments(nodeOrList) {
 
     out.push(c);
 
-    const kids =
-      c.children ||
-      c.replies ||
-      c.responses ||
-      c.thread ||
-      c.comments ||
-      null;
-
+    const kids = c.children || c.replies || c.responses || c.thread || c.comments || null;
     if (Array.isArray(kids) && kids.length) {
       for (const k of kids) stack.push(k);
     }
   }
-
   return out;
-}
-
-// ---- NEW: parent/top-level resolution ----
-function getCommentId(c) {
-  return c?.id ?? c?.comment_id ?? c?.commentId ?? null;
-}
-
-function getParentId(c) {
-  // Substack variants / different payload shapes
-  return (
-    c?.parent_id ??
-    c?.parentId ??
-    c?.parent_comment_id ??
-    c?.parentCommentId ??
-    c?.reply_to_comment_id ??
-    c?.replyToCommentId ??
-    c?.in_reply_to ??
-    c?.inReplyTo ??
-    null
-  );
-}
-
-function computeTopLevelId(comment, idToComment) {
-  let cur = comment;
-  let safety = 0;
-
-  while (cur && safety++ < 200) {
-    const pid = getParentId(cur);
-    if (!pid) break;
-
-    const parent = idToComment.get(String(pid));
-    if (!parent) {
-      // parent not present in this payload; best-effort: stop here
-      break;
-    }
-    cur = parent;
-  }
-
-  return getCommentId(cur) ?? getCommentId(comment) ?? null;
 }
 
 async function listPostsFromArchive(baseUrl, maxPosts) {
@@ -280,10 +241,7 @@ async function listPostsFromArchive(baseUrl, maxPosts) {
     for (const item of chunk) {
       const u = item?.canonical_url ? String(item.canonical_url) : null;
       if (!u) continue;
-      posts.push({
-        url: u,
-        title: item?.title ? String(item.title) : null
-      });
+      posts.push({ url: u, title: item?.title ? String(item.title) : null });
       if (posts.length >= maxPosts) break;
     }
 
@@ -297,14 +255,7 @@ async function listPostsFromArchive(baseUrl, maxPosts) {
 async function getPostIdFromSlug(slug) {
   const metaUrl = `${SUBSTACK_URL}/api/v1/posts/${encodeURIComponent(slug)}`;
   const meta = await fetchJson(metaUrl);
-
-  const id = meta?.id || meta?.post?.id || meta?.post_id || meta?.postId || null;
-
-  if (!id) {
-    console.log(`Could not find post id in ${metaUrl}. Top keys: ${Object.keys(meta || {}).slice(0, 30).join(", ")}`);
-    return null;
-  }
-  return id;
+  return meta?.id || meta?.post?.id || meta?.post_id || meta?.postId || null;
 }
 
 async function getAllCommentsForPostId(postId) {
@@ -316,6 +267,18 @@ async function getAllCommentsForPostId(postId) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.comments)) return data.comments;
   return [];
+}
+
+function buildReplyUrl(postUrl, specificCommentId) {
+  if (!specificCommentId) return null;
+  // This is the "direct to commentId" style link, similar to what Substack shares.
+  // It still loads the post page, but scrolls to the comment directly.
+  return `${postUrl}?commentId=${encodeURIComponent(specificCommentId)}&comments=true`;
+}
+
+function buildThreadUrl(postUrl, threadId) {
+  if (!threadId) return null;
+  return `${postUrl.replace(/\/+$/, "")}/comment/${encodeURIComponent(threadId)}`;
 }
 
 async function crawl() {
@@ -335,27 +298,14 @@ async function crawl() {
     console.log(`Scanning post ${idx}/${posts.length}: ${post.url}`);
 
     const slug = slugFromPostUrl(post.url);
-    if (!slug) {
-      console.log(`  Skip (no /p/slug): ${post.url}`);
-      continue;
-    }
+    if (!slug) continue;
 
     try {
       const postId = await getPostIdFromSlug(slug);
-      if (!postId) {
-        console.log(`  Skip (no postId for slug=${slug})`);
-        continue;
-      }
+      if (!postId) continue;
 
       const commentsTree = await getAllCommentsForPostId(postId);
       const comments = flattenComments(commentsTree);
-
-      // Build id->comment map for top-level resolution
-      const idToComment = new Map();
-      for (const c of comments) {
-        const id = getCommentId(c);
-        if (id != null) idToComment.set(String(id), c);
-      }
 
       let matchedThisPost = 0;
 
@@ -369,22 +319,22 @@ async function crawl() {
         const text = getBodyText(c);
         if (!text) continue;
 
-        const commentId = getCommentId(c);
-        const commentUrl = commentId ? `${post.url.replace(/\/+$/, "")}/comment/${commentId}` : null;
-
-        const topLevelCommentId = computeTopLevelId(c, idToComment);
-        const topLevelCommentUrl = topLevelCommentId
-          ? `${post.url.replace(/\/+$/, "")}/comment/${topLevelCommentId}`
-          : null;
+        const specificCommentId = getSpecificCommentId(c);
+        const threadId = getThreadId(c);
 
         out.push({
           postUrl: post.url,
           postTitle: post.title,
           postId,
-          commentId,
-          commentUrl,
-          topLevelCommentId,
-          topLevelCommentUrl,
+
+          // Keep both IDs explicitly
+          commentId: specificCommentId,
+          threadId: threadId,
+
+          // Links
+          commentUrl: buildReplyUrl(post.url, specificCommentId),
+          topLevelCommentUrl: buildThreadUrl(post.url, threadId),
+
           commentDateMs: getCommentDateMs(c),
           likes: getLikeCount(c),
           text
@@ -419,7 +369,7 @@ async function crawl() {
     rows: deduped
   };
 
-  fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
+  fs.mkdirSync(path.dirname("docs/data/comments.json"), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2), "utf8");
 
   console.log(`Wrote ${deduped.length} comments to ${OUT_PATH}`);
