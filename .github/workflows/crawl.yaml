@@ -14,7 +14,7 @@ on:
       maxPosts:
         description: "Max posts to scan"
         required: true
-        default: "600"
+        default: "20"
       sleepMs:
         description: "Delay between requests (ms)"
         required: true
