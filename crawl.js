@@ -20,7 +20,7 @@ async function politePause(baseMs = SLEEP_MS) {
 }
 
 function ua() {
-  return "ErusianTracker/3.1 (+GitHub Actions; comments JSON + replies)";
+  return "ErusianTracker/3.2 (+GitHub Actions; comments JSON + replies + formatting)";
 }
 
 async function fetchWithRetry(url, { accept, kind }) {
@@ -81,14 +81,83 @@ function slugFromPostUrl(postUrl) {
   }
 }
 
-function normalizeText(s) {
-  return (s || "").replace(/\s+/g, " ").trim();
+// Keep spaces sane but DO NOT destroy newlines
+function normalizeLine(line) {
+  return (line || "").replace(/[ \t]+/g, " ").trimEnd();
 }
 
-function htmlToText(html) {
-  if (!html) return "";
-  const $ = cheerio.load(`<div id="x">${html}</div>`);
-  return normalizeText($("#x").text());
+/**
+ * Convert Substack body_html into a readable plaintext that preserves:
+ * - paragraphs as blank lines
+ * - blockquotes as "> " lines (and keeps blank lines around them)
+ * - <br> as line breaks
+ *
+ * If the input is already plaintext (no "<"), we keep its newlines as-is.
+ */
+function htmlToTextPreserveFormatting(htmlOrText) {
+  if (!htmlOrText) return "";
+
+  const s = String(htmlOrText);
+
+  // If it doesn't look like HTML, keep as text (preserve newlines)
+  if (!/[<][a-z!/]/i.test(s)) {
+    const lines = s.replace(/\r/g, "").split("\n").map(normalizeLine);
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  const $ = cheerio.load(`<div id="x">${s}</div>`, { decodeEntities: true });
+  const root = $("#x");
+
+  // Convert <br> to literal newlines
+  root.find("br").replaceWith("\n");
+
+  // Convert blockquotes to lines prefixed by "> "
+  root.find("blockquote").each((_, bq) => {
+    const raw = $(bq).text().replace(/\r/g, "");
+    const lines = raw
+      .split("\n")
+      .map((l) => l.replace(/[ \t]+/g, " ").trim())
+      .filter((l) => l.length > 0);
+
+    const quoted = lines.map((l) => `> ${l}`).join("\n");
+    // Surround with blank lines so it reads like Markdown-ish text
+    $(bq).replaceWith(`\n\n${quoted}\n\n`);
+  });
+
+  // Convert paragraphs and list items into separated lines
+  const out = [];
+
+  // Prefer explicit blocks: p, li, headings; otherwise fallback to text
+  const blocks = root.find("p, li, h1, h2, h3, h4, h5, h6");
+  if (blocks.length) {
+    blocks.each((_, el) => {
+      const t = $(el).text().replace(/\r/g, "");
+      const cleaned = t
+        .split("\n")
+        .map((l) => l.replace(/[ \t]+/g, " ").trim())
+        .filter((l) => l.length > 0)
+        .join("\n");
+      if (cleaned) out.push(cleaned);
+    });
+  } else {
+    // Fallback: just take the root text, but preserve newlines we injected from <br>/<blockquote>
+    const raw = root.text().replace(/\r/g, "");
+    const cleaned = raw
+      .split("\n")
+      .map((l) => l.replace(/[ \t]+/g, " ").trim())
+      .join("\n");
+    if (cleaned.trim()) out.push(cleaned);
+  }
+
+  let text = out.join("\n\n");
+
+  // Cleanup: collapse excessive blank lines, trim
+  text = text
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return text;
 }
 
 function getAuthorName(comment) {
@@ -114,7 +183,7 @@ function getAuthorHandle(comment) {
 
 function getBodyText(comment) {
   const html = comment?.body_html || comment?.body || comment?.text || "";
-  return htmlToText(html);
+  return htmlToTextPreserveFormatting(html);
 }
 
 function getCommentDateMs(comment) {
@@ -137,7 +206,7 @@ function getCommentDateMs(comment) {
   return Number.isFinite(ms) ? ms : null;
 }
 
-// --- NEW: Flatten threaded comment trees so replies get included ---
+// Flatten threaded trees so replies get included
 function flattenComments(nodeOrList) {
   const out = [];
   const stack = Array.isArray(nodeOrList) ? [...nodeOrList] : [nodeOrList];
@@ -148,7 +217,6 @@ function flattenComments(nodeOrList) {
 
     out.push(c);
 
-    // Common nesting keys (Substack varies by endpoint/version)
     const kids =
       c.children ||
       c.replies ||
@@ -220,12 +288,15 @@ async function getAllCommentsForPostId(postId) {
 }
 
 function getLikeCount(comment) {
-  // Try a few shapes; if none exist, 0.
   const a = comment?.reactions?.like;
   const b = comment?.like_count;
   const c = comment?.likes;
   const n = Number(a ?? b ?? c ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeText(s) {
+  return (s || "").replace(/\s+/g, " ").trim();
 }
 
 async function crawl() {
@@ -242,8 +313,6 @@ async function crawl() {
   let idx = 0;
   for (const post of posts) {
     idx++;
-
-    // --- NEW: log each post being scanned (#2) ---
     console.log(`Scanning post ${idx}/${posts.length}: ${post.url}`);
 
     const slug = slugFromPostUrl(post.url);
@@ -260,8 +329,6 @@ async function crawl() {
       }
 
       const commentsTree = await getAllCommentsForPostId(postId);
-
-      // --- NEW: flatten includes replies (#1) ---
       const comments = flattenComments(commentsTree);
 
       let matchedThisPost = 0;
