@@ -209,4 +209,67 @@ async function crawl() {
   const out = [];
 
   let i = 0;
-  for (const post of po
+  for (const post of posts) {
+    i++;
+
+    const commentsUrl = toOpenCommentsUrl(post.url, SUBSTACK_URL);
+    if (!commentsUrl) {
+      console.log(`Skip (no /p/ slug): ${post.url}`);
+      continue;
+    }
+
+    try {
+      const html = await fetchHtml(commentsUrl);
+      const $ = cheerio.load(html);
+
+      const anchors = findAuthorAnchors($);
+      for (const a of anchors) {
+        const container = pickCommentContainer($, a);
+        if (!container) continue;
+
+        const text = extractCommentText($, container);
+        if (!text) continue;
+
+        out.push({
+          postUrl: post.url,
+          postTitle: post.title,
+          commentsUrl,
+          commentDateMs: extractDatetimeMs($, container),
+          likes: extractLikesLoose($, container),
+          text
+        });
+      }
+    } catch (e) {
+      console.log(`Skip (${i}/${posts.length}) ${commentsUrl}: ${String(e?.message ?? e)}`);
+    }
+
+    await politePause(SLEEP_MS);
+  }
+
+  // De-dupe
+  const seen = new Set();
+  const deduped = [];
+  for (const r of out) {
+    const k = `${r.postUrl}||${r.commentDateMs || ""}||${(r.text || "").slice(0, 200)}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    deduped.push(r);
+  }
+
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    substackUrl: SUBSTACK_URL,
+    username: wantedName,
+    count: deduped.length,
+    rows: deduped
+  };
+
+  fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
+  fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2), "utf8");
+  console.log(`Wrote ${deduped.length} comments to ${OUT_PATH}`);
+}
+
+crawl().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
