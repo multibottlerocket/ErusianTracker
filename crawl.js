@@ -2,10 +2,18 @@ import fs from "node:fs";
 import path from "node:path";
 import * as cheerio from "cheerio";
 
+/**
+ * Safe defaults tuned to avoid Substack rate limits:
+ * - MAX_POSTS default 600 (raise gradually once stable)
+ * - SLEEP_MS default 1500ms + jitter
+ * - aggressive 429 handling with Retry-After + exponential backoff
+ */
 const SUBSTACK_URL = (process.env.SUBSTACK_URL || "https://www.astralcodexten.com").replace(/\/+$/, "");
 const USERNAME_RAW = process.env.USERNAME || "Erusian";
-const MAX_POSTS = Math.max(1, Math.min(Number(process.env.MAX_POSTS || "1200"), 5000));
-const SLEEP_MS = Math.max(50, Math.min(Number(process.env.SLEEP_MS || "200"), 2000));
+
+// Safe values
+const MAX_POSTS = Math.max(1, Math.min(Number(process.env.MAX_POSTS || "600"), 5000));
+const SLEEP_MS = Math.max(250, Math.min(Number(process.env.SLEEP_MS || "1500"), 5000));
 
 const OUT_PATH = path.join("docs", "data", "comments.json");
 
@@ -14,15 +22,77 @@ const wantedHandle = USERNAME_RAW.trim().toLowerCase().replace(/^@/, "");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+async function politePause(baseMs = SLEEP_MS) {
+  // Jitter helps avoid looking like a perfect clockwork bot.
+  const jitter = Math.floor(Math.random() * 350); // 0–350ms
+  await sleep(baseMs + jitter);
+}
+
+function ua() {
+  // A stable UA string reduces some anti-bot false positives vs default undici UA.
+  return "ErusianTracker/1.1 (+https://github.com/)";
+}
+
+async function fetchWithRetry(url, { accept, kind }) {
+  const MAX_RETRIES = 8;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const r = await fetch(url, {
+      headers: {
+        accept,
+        "user-agent": ua()
+      }
+    });
+
+    if (r.ok) return r;
+
+    // Rate limit
+    if (r.status === 429) {
+      const retryAfter = r.headers.get("retry-after");
+      const retryAfterMs = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : 0;
+
+      const backoffMs = Math.min(90_000, 1000 * Math.pow(2, attempt)); // caps at 90s
+      const jitterMs = Math.floor(Math.random() * 800);
+      const waitMs = Math.max(retryAfterMs, backoffMs) + jitterMs;
+
+      console.log(
+        `429 rate limit (${kind}) for ${url} — waiting ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
+      );
+      await sleep(waitMs);
+      continue;
+    }
+
+    // Transient server errors
+    if (r.status >= 500 && r.status < 600 && attempt < MAX_RETRIES) {
+      const backoffMs = Math.min(45_000, 750 * Math.pow(2, attempt));
+      const jitterMs = Math.floor(Math.random() * 500);
+      const waitMs = backoffMs + jitterMs;
+      console.log(`HTTP ${r.status} (${kind}) for ${url} — retrying in ${waitMs}ms`);
+      await sleep(waitMs);
+      continue;
+    }
+
+    // Everything else: fail
+    const text = await r.text().catch(() => "");
+    throw new Error(`HTTP ${r.status} (${kind}) for ${url}${text ? ` — ${text.slice(0, 200)}` : ""}`);
+  }
+
+  throw new Error(`Retries exhausted (${kind}) for ${url}`);
+}
+
 async function fetchJson(url) {
-  const r = await fetch(url, { headers: { accept: "application/json,text/plain,*/*" } });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  const r = await fetchWithRetry(url, {
+    accept: "application/json,text/plain,*/*",
+    kind: "json"
+  });
   return r.json();
 }
 
 async function fetchHtml(url) {
-  const r = await fetch(url, { headers: { accept: "text/html,*/*" } });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  const r = await fetchWithRetry(url, {
+    accept: "text/html,*/*",
+    kind: "html"
+  });
   return r.text();
 }
 
@@ -61,7 +131,8 @@ async function listPostsFromArchive(baseUrl, maxPosts) {
     }
 
     offset += chunk.length;
-    await sleep(SLEEP_MS);
+    // Be nice to the archive feed specifically
+    await politePause(SLEEP_MS);
   }
 
   return posts;
@@ -82,14 +153,12 @@ function normalizeText(s) {
 }
 
 function extractCommentText($, el) {
-  // Prefer "content-ish" areas first
   const preferred = $(el)
     .find(".markup, [data-testid*=markup], [class*=markup], [class*=content], [class*=body]")
     .first();
   const t1 = normalizeText(preferred.text());
   if (t1) return t1;
 
-  // Fallback: element text, stripped a bit
   let t = $(el).text();
   t = t.replace(/\b(Reply|Share|Like|Likes|Collapse|Expand)\b/gi, " ");
   return normalizeText(t);
@@ -112,7 +181,6 @@ function extractDatetimeMs($, el) {
 }
 
 function findLikelyCommentBlocks($) {
-  // Broad net; Substack changes classes often.
   const blocks = [];
   const seen = new Set();
 
@@ -144,6 +212,7 @@ async function crawl() {
   console.log(`Substack: ${SUBSTACK_URL}`);
   console.log(`User: ${wantedName} (handle match: @${wantedHandle})`);
   console.log(`Max posts: ${MAX_POSTS}`);
+  console.log(`Sleep: ${SLEEP_MS}ms (+ jitter), retries enabled`);
 
   const posts = await listPostsFromArchive(SUBSTACK_URL, MAX_POSTS);
   console.log(`Found ${posts.length} posts via archive feed.`);
@@ -181,7 +250,6 @@ async function crawl() {
         const likes = extractLikesLoose($, el);
         const commentDateMs = extractDatetimeMs($, el);
 
-        // best-effort permalink
         const commentUrl =
           $(el).find("a[href*='#comment'], a[href*='comment']").first().attr("href") || null;
 
@@ -196,18 +264,21 @@ async function crawl() {
         });
       }
     } catch (e) {
-      // Some posts may not have comments pages or may error; ignore and continue.
+      // Don’t kill the whole crawl on a single post.
+      // Most common failures are temporary 429s or a missing comments page.
+      // You can inspect logs if you want:
+      // console.log(`Skip (${i}/${posts.length}) ${commentsUrl}: ${String(e?.message ?? e)}`);
     }
 
     if (i % 25 === 0) console.log(`Scanned ${i}/${posts.length} posts...`);
-    await sleep(SLEEP_MS);
+    await politePause(SLEEP_MS);
   }
 
-  // De-dupe (rough)
+  // Rough de-dupe
   const seen = new Set();
   const deduped = [];
   for (const r of out) {
-    const k = `${r.postUrl}||${r.commentDateMs || ""}||${r.text.slice(0, 200)}`;
+    const k = `${r.postUrl}||${r.commentDateMs || ""}||${(r.text || "").slice(0, 200)}`;
     if (seen.has(k)) continue;
     seen.add(k);
     deduped.push(r);
