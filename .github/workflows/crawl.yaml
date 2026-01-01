@@ -14,11 +14,11 @@ on:
       maxPosts:
         description: "Max posts to scan"
         required: true
-        default: "1200"
+        default: "600"
       sleepMs:
         description: "Delay between requests (ms)"
         required: true
-        default: "200"
+        default: "500"
 
 permissions:
   contents: write
