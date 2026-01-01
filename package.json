@@ -1,0 +1,8 @@
+{
+  "name": "substack-user-comments-gh-pages",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  }
+}

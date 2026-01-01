@@ -1,0 +1,53 @@
+name: Crawl Substack user comments
+
+on:
+  workflow_dispatch:
+    inputs:
+      substackUrl:
+        description: "Substack base URL"
+        required: true
+        default: "https://www.astralcodexten.com"
+      username:
+        description: "Display name or @handle"
+        required: true
+        default: "Erusian"
+      maxPosts:
+        description: "Max posts to scan"
+        required: true
+        default: "1200"
+      sleepMs:
+        description: "Delay between requests (ms)"
+        required: true
+        default: "200"
+
+permissions:
+  contents: write
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm install
+
+      - name: Run crawler
+        run: node crawl.js
+        env:
+          SUBSTACK_URL: ${{ inputs.substackUrl }}
+          USERNAME: ${{ inputs.username }}
+          MAX_POSTS: ${{ inputs.maxPosts }}
+          SLEEP_MS: ${{ inputs.sleepMs }}
+
+      - name: Commit updated dataset
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs/data/comments.json
+          git commit -m "Update comments dataset" || echo "No changes"
+          git push
