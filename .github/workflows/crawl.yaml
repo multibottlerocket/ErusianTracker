@@ -19,6 +19,9 @@ on:
         description: "Delay between requests (ms)"
         required: true
         default: "500"
+  schedule:
+    # Every day at 5:00 a.m. PST (UTC-8) == 13:00 UTC
+    - cron: "0 13 * * *"
 
 permissions:
   contents: write
@@ -39,10 +42,10 @@ jobs:
       - name: Run crawler
         run: node crawl.js
         env:
-          SUBSTACK_URL: ${{ inputs.substackUrl }}
-          USERNAME: ${{ inputs.username }}
-          MAX_POSTS: ${{ inputs.maxPosts }}
-          SLEEP_MS: ${{ inputs.sleepMs }}
+          SUBSTACK_URL: ${{ inputs.substackUrl || 'https://www.astralcodexten.com' }}
+          USERNAME: ${{ inputs.username || 'Erusian' }}
+          MAX_POSTS: ${{ inputs.maxPosts || '20' }}
+          SLEEP_MS: ${{ inputs.sleepMs || '500' }}
 
       - name: Commit updated dataset
         run: |
