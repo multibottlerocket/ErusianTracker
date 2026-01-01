@@ -20,7 +20,7 @@ async function politePause(baseMs = SLEEP_MS) {
 }
 
 function ua() {
-  return "ErusianTracker/3.0 (+GitHub Actions; comments JSON)";
+  return "ErusianTracker/3.1 (+GitHub Actions; comments JSON + replies)";
 }
 
 async function fetchWithRetry(url, { accept, kind }) {
@@ -30,8 +30,8 @@ async function fetchWithRetry(url, { accept, kind }) {
     const r = await fetch(url, {
       headers: {
         accept,
-        "user-agent": ua(),
-      },
+        "user-agent": ua()
+      }
     });
 
     if (r.ok) return r;
@@ -113,9 +113,7 @@ function getAuthorHandle(comment) {
 }
 
 function getBodyText(comment) {
-  // Substack often provides body_html; sometimes body.
   const html = comment?.body_html || comment?.body || comment?.text || "";
-  // body might already be plaintext; htmlToText is safe either way.
   return htmlToText(html);
 }
 
@@ -131,13 +129,40 @@ function getCommentDateMs(comment) {
   if (!dt) return null;
 
   if (typeof dt === "number") {
-    // might be seconds
-    const ms = dt > 10_000_000_000 ? dt : dt * 1000;
+    const ms = dt > 10_000_000_000 ? dt : dt * 1000; // seconds -> ms
     return Number.isFinite(ms) ? ms : null;
   }
 
   const ms = Date.parse(String(dt));
   return Number.isFinite(ms) ? ms : null;
+}
+
+// --- NEW: Flatten threaded comment trees so replies get included ---
+function flattenComments(nodeOrList) {
+  const out = [];
+  const stack = Array.isArray(nodeOrList) ? [...nodeOrList] : [nodeOrList];
+
+  while (stack.length) {
+    const c = stack.pop();
+    if (!c || typeof c !== "object") continue;
+
+    out.push(c);
+
+    // Common nesting keys (Substack varies by endpoint/version)
+    const kids =
+      c.children ||
+      c.replies ||
+      c.responses ||
+      c.thread ||
+      c.comments ||
+      null;
+
+    if (Array.isArray(kids) && kids.length) {
+      for (const k of kids) stack.push(k);
+    }
+  }
+
+  return out;
 }
 
 async function listPostsFromArchive(baseUrl, maxPosts) {
@@ -156,7 +181,7 @@ async function listPostsFromArchive(baseUrl, maxPosts) {
       if (!u) continue;
       posts.push({
         url: u,
-        title: item?.title ? String(item.title) : null,
+        title: item?.title ? String(item.title) : null
       });
       if (posts.length >= maxPosts) break;
     }
@@ -169,36 +194,38 @@ async function listPostsFromArchive(baseUrl, maxPosts) {
 }
 
 async function getPostIdFromSlug(slug) {
-  // Many substacks expose /api/v1/posts/<slug> returning JSON with id.
   const metaUrl = `${SUBSTACK_URL}/api/v1/posts/${encodeURIComponent(slug)}`;
   const meta = await fetchJson(metaUrl);
 
-  const id =
-    meta?.id ||
-    meta?.post?.id ||
-    meta?.post_id ||
-    meta?.postId ||
-    null;
+  const id = meta?.id || meta?.post?.id || meta?.post_id || meta?.postId || null;
 
   if (!id) {
-    // Helpful for debugging in logs if Substack changes structure
-    console.log(`Could not find post id in ${metaUrl}. Keys: ${Object.keys(meta || {}).slice(0, 30).join(", ")}`);
+    console.log(
+      `Could not find post id in ${metaUrl}. Top keys: ${Object.keys(meta || {}).slice(0, 30).join(", ")}`
+    );
     return null;
   }
   return id;
 }
 
 async function getAllCommentsForPostId(postId) {
-  // Endpoint used by ACX comments widget / known scrapers.
   const url =
     `${SUBSTACK_URL}/api/v1/post/${postId}/comments` +
     `?token=&all_comments=true&sort=oldest_first&last_comment_at`;
   const data = await fetchJson(url);
 
-  // Some installs return an array; others wrap it.
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.comments)) return data.comments;
   return [];
+}
+
+function getLikeCount(comment) {
+  // Try a few shapes; if none exist, 0.
+  const a = comment?.reactions?.like;
+  const b = comment?.like_count;
+  const c = comment?.likes;
+  const n = Number(a ?? b ?? c ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
 async function crawl() {
@@ -215,29 +242,35 @@ async function crawl() {
   let idx = 0;
   for (const post of posts) {
     idx++;
+
+    // --- NEW: log each post being scanned (#2) ---
+    console.log(`Scanning post ${idx}/${posts.length}: ${post.url}`);
+
     const slug = slugFromPostUrl(post.url);
     if (!slug) {
-      console.log(`Skip (no /p/slug): ${post.url}`);
+      console.log(`  Skip (no /p/slug): ${post.url}`);
       continue;
     }
 
     try {
       const postId = await getPostIdFromSlug(slug);
       if (!postId) {
-        console.log(`Skip (no postId): ${post.url}`);
+        console.log(`  Skip (no postId for slug=${slug})`);
         continue;
       }
 
-      const comments = await getAllCommentsForPostId(postId);
+      const commentsTree = await getAllCommentsForPostId(postId);
+
+      // --- NEW: flatten includes replies (#1) ---
+      const comments = flattenComments(commentsTree);
+
+      let matchedThisPost = 0;
 
       for (const c of comments) {
         const name = normalizeText(getAuthorName(c));
         const handle = normalizeText(getAuthorHandle(c)).toLowerCase().replace(/^@/, "");
 
-        const matches =
-          name === wantedName ||
-          (handle && handle === wantedHandle);
-
+        const matches = name === wantedName || (handle && handle === wantedHandle);
         if (!matches) continue;
 
         const text = getBodyText(c);
@@ -253,12 +286,16 @@ async function crawl() {
           commentId,
           commentUrl,
           commentDateMs: getCommentDateMs(c),
-          likes: Number(c?.reactions?.like || c?.like_count || c?.likes || 0) || 0,
-          text,
+          likes: getLikeCount(c),
+          text
         });
+
+        matchedThisPost++;
       }
+
+      console.log(`  Found ${matchedThisPost} matching comments (including replies)`);
     } catch (e) {
-      console.log(`Skip (${idx}/${posts.length}) ${post.url}: ${String(e?.message ?? e)}`);
+      console.log(`  Skip due to error: ${String(e?.message ?? e)}`);
     }
 
     await politePause(SLEEP_MS);
@@ -279,7 +316,7 @@ async function crawl() {
     substackUrl: SUBSTACK_URL,
     username: wantedName,
     count: deduped.length,
-    rows: deduped,
+    rows: deduped
   };
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
