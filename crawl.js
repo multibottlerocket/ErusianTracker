@@ -20,7 +20,7 @@ async function politePause(baseMs = SLEEP_MS) {
 }
 
 function ua() {
-  return "ErusianTracker/3.7 (+GitHub Actions; robust top-level detection)";
+  return "ErusianTracker/3.8 (+GitHub Actions; parent links)";
 }
 
 async function fetchWithRetry(url, { accept, kind }) {
@@ -170,7 +170,7 @@ function flattenWithParents(rootList) {
 
     flat.push(c);
 
-    const rid = getReplyId(c) ?? getObjectId(c);
+    const rid = getReplyId(c) ?? getObjectId(c); // replyId if present, else id for top-levels
     if (rid != null && !parentBy.has(String(rid))) {
       parentBy.set(String(rid), parentReplyId);
     }
@@ -212,6 +212,12 @@ function computeIds(c, parentBy) {
   }
 
   return { commentId, topLevelCommentId: cur };
+}
+
+function computeParentId(commentId, parentBy) {
+  if (commentId == null) return null;
+  const pid = parentBy.get(String(commentId)) ?? null;
+  return pid == null ? null : pid;
 }
 
 async function listPostsFromArchive(baseUrl, maxPosts) {
@@ -292,6 +298,7 @@ async function crawl() {
         if (!text) continue;
 
         const { commentId, topLevelCommentId } = computeIds(c, parentBy);
+        const parentCommentId = computeParentId(commentId, parentBy);
 
         out.push({
           postUrl: post.url,
@@ -300,10 +307,12 @@ async function crawl() {
 
           commentId,
           topLevelCommentId,
+          parentCommentId,
 
-          // Both “slashy” pages (fast)
+          // All “slashy” pages (fast)
           commentUrl: buildCommentPageUrl(post.url, commentId),
           topLevelCommentUrl: buildCommentPageUrl(post.url, topLevelCommentId),
+          parentCommentUrl: buildCommentPageUrl(post.url, parentCommentId),
 
           commentDateMs: getCommentDateMs(c),
           likes: getLikeCount(c),

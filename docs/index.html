@@ -84,7 +84,7 @@ function apply(){
   const sort = el("sort").value;
   const limit = Number(el("limit").value);
 
-  let rows = data.rows || [];
+  let rows = data?.rows || [];
   if (q){
     rows = rows.filter(r => {
       const hay = `${r.text||""} ${r.postTitle||""} ${r.postUrl||""}`.toLowerCase();
@@ -113,12 +113,14 @@ function render(limit){
     const postTitle = esc(r.postTitle || "(untitled)");
     const postUrl = esc(r.postUrl);
 
-    // IMPORTANT: use URLs from JSON; do NOT construct slow links
+    // IMPORTANT: Use URLs from JSON; do NOT construct slow links
     const commentUrl = r.commentUrl || null;
+    const parentUrl = r.parentCommentUrl || null;
     const topUrl = r.topLevelCommentUrl || null;
 
     const links = [];
     if (commentUrl) links.push(`<a target="_blank" rel="noreferrer" href="${esc(commentUrl)}">comment</a>`);
+    if (parentUrl && parentUrl !== commentUrl) links.push(`<a target="_blank" rel="noreferrer" href="${esc(parentUrl)}">parent</a>`);
     if (topUrl && topUrl !== commentUrl) links.push(`<a target="_blank" rel="noreferrer" href="${esc(topUrl)}">top-level</a>`);
 
     const linksHtml = links.length ? `<span class="links">${links.join("")}</span>` : "";
@@ -142,7 +144,12 @@ function exportCsvCurrentPage(){
   const limit = Number(el("limit").value);
   const rows = filtered.slice(offset, offset + limit);
 
-  const header = ["postTitle","postUrl","commentDate","likes","commentUrl","topLevelCommentUrl","text"];
+  const header = [
+    "postTitle","postUrl","commentDate","likes",
+    "commentUrl","parentCommentUrl","topLevelCommentUrl",
+    "commentId","parentCommentId","topLevelCommentId",
+    "text"
+  ];
   const lines = [header.join(",")];
 
   for (const r of rows){
@@ -151,8 +158,15 @@ function exportCsvCurrentPage(){
       r.postUrl || "",
       r.commentDateMs ? new Date(r.commentDateMs).toISOString() : "",
       String(r.likes || 0),
+
       r.commentUrl || "",
+      r.parentCommentUrl || "",
       r.topLevelCommentUrl || "",
+
+      r.commentId || "",
+      r.parentCommentId || "",
+      r.topLevelCommentId || "",
+
       (r.text || "").replaceAll("\r"," ").replaceAll("\n"," ")
     ].map(v => `"${String(v).replaceAll('"','""')}"`);
     lines.push(vals.join(","));
@@ -161,7 +175,7 @@ function exportCsvCurrentPage(){
   const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `comments_page.csv`;
+  a.download = `erusian_tracker_page.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -183,8 +197,14 @@ async function boot(){
 }
 
 el("apply").addEventListener("click", apply);
-el("prev").addEventListener("click", () => { offset = Math.max(0, offset - Number(el("limit").value)); render(Number(el("limit").value)); });
-el("next").addEventListener("click", () => { offset = offset + Number(el("limit").value); render(Number(el("limit").value)); });
+el("prev").addEventListener("click", () => {
+  offset = Math.max(0, offset - Number(el("limit").value));
+  render(Number(el("limit").value));
+});
+el("next").addEventListener("click", () => {
+  offset = offset + Number(el("limit").value);
+  render(Number(el("limit").value));
+});
 el("export").addEventListener("click", exportCsvCurrentPage);
 
 boot();
