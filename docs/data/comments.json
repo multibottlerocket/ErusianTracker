@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-01-22T13:52:16.869Z",
+  "generatedAt": "2026-01-23T13:49:04.115Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 13,
+  "count": 12,
   "rows": [
     {
       "postUrl": "https://www.astralcodexten.com/p/you-have-only-x-years-to-escape-permanent",
@@ -171,20 +171,6 @@
       "commentDateMs": 1766987353710,
       "likes": 0,
       "text": "Threecan."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/against-against-boomers",
-      "postTitle": "Against Against Boomers",
-      "postId": 180400932,
-      "commentId": 189628398,
-      "topLevelCommentId": "189628398",
-      "parentCommentId": null,
-      "commentUrl": "https://www.astralcodexten.com/p/against-against-boomers/comment/189628398",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/against-against-boomers/comment/189628398",
-      "parentCommentUrl": null,
-      "commentDateMs": 1766167921105,
-      "likes": 0,
-      "text": "I basically agree with this. However, I will point out that every generation tends to have groups that vilify their parents so the trend isn't new. The boomers themselves used to say things like \"don't trust anyone over 30.\""
     }
   ]
 }
