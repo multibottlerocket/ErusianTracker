@@ -14,6 +14,22 @@ const wantedName = USERNAME_RAW.trim();
 const wantedHandle = USERNAME_RAW.trim().toLowerCase().replace(/^@/, "");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function loadExistingComments() {
+  try {
+    if (fs.existsSync(OUT_PATH)) {
+      const raw = fs.readFileSync(OUT_PATH, "utf8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed?.rows)) {
+        console.log(`Loaded ${parsed.rows.length} existing comments from ${OUT_PATH}`);
+        return parsed.rows;
+      }
+    }
+  } catch (e) {
+    console.log(`Could not load existing comments: ${e.message}`);
+  }
+  return [];
+}
 async function politePause(baseMs = SLEEP_MS) {
   const jitter = Math.floor(Math.random() * 350);
   await sleep(baseMs + jitter);
@@ -253,7 +269,7 @@ async function getPostIdFromSlug(slug) {
 async function getAllCommentsForPostId(postId) {
   const url =
     `${SUBSTACK_URL}/api/v1/post/${postId}/comments` +
-    `?token=&all_comments=true&sort=oldest_first&last_comment_at`;
+    `?token=&all_comments=true&sort=oldest_first`;
   const data = await fetchJson(url);
 
   if (Array.isArray(data)) return data;
@@ -330,15 +346,24 @@ async function crawl() {
     await politePause(SLEEP_MS);
   }
 
-  // De-dupe
+  // Load existing comments and merge with newly scraped ones
+  const existing = loadExistingComments();
+  const combined = [...existing, ...out];
+
+  // De-dupe (keeps first occurrence, so existing comments preserved, new ones added)
   const seen = new Set();
   const deduped = [];
-  for (const r of out) {
+  for (const r of combined) {
     const k = `${r.postUrl}||${r.commentId || ""}||${(r.text || "").slice(0, 200)}`;
     if (seen.has(k)) continue;
     seen.add(k);
     deduped.push(r);
   }
+
+  // Sort by comment date (newest first) for consistent ordering
+  deduped.sort((a, b) => (b.commentDateMs || 0) - (a.commentDateMs || 0));
+
+  console.log(`Total comments after merge: ${deduped.length} (${existing.length} existing + ${out.length} new, minus duplicates)`);
 
   const payload = {
     generatedAt: new Date().toISOString(),
