@@ -1,7 +1,22 @@
 {
-  "generatedAt": "2026-02-02T14:05:41.021Z",
+  "generatedAt": "2026-02-03T14:07:53.820Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 0,
-  "rows": []
+  "count": 1,
+  "rows": [
+    {
+      "postUrl": "https://www.astralcodexten.com/p/open-thread-419",
+      "postTitle": "Open Thread 419",
+      "postId": 186606605,
+      "commentId": 208941591,
+      "topLevelCommentId": "208941591",
+      "parentCommentId": null,
+      "commentUrl": "https://www.astralcodexten.com/p/open-thread-419/comment/208941591",
+      "topLevelCommentUrl": "https://www.astralcodexten.com/p/open-thread-419/comment/208941591",
+      "parentCommentUrl": null,
+      "commentDateMs": 1770057690810,
+      "likes": 0,
+      "text": "Scott is in the Epstein files albeit in a small way. They discuss him, he wasn't in contact with anyone. Truly this is the worst crossover event."
+    }
+  ]
 }
