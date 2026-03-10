@@ -1,9 +1,23 @@
 {
-  "generatedAt": "2026-03-09T14:09:38.332Z",
+  "generatedAt": "2026-03-10T14:04:44.035Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 4,
+  "count": 5,
   "rows": [
+    {
+      "postUrl": "https://www.astralcodexten.com/p/open-thread-424",
+      "postTitle": "Open Thread 424",
+      "postId": 190384458,
+      "commentId": 225281649,
+      "topLevelCommentId": "225233699",
+      "parentCommentId": 225233699,
+      "commentUrl": "https://www.astralcodexten.com/p/open-thread-424/comment/225281649",
+      "topLevelCommentUrl": "https://www.astralcodexten.com/p/open-thread-424/comment/225233699",
+      "parentCommentUrl": "https://www.astralcodexten.com/p/open-thread-424/comment/225233699",
+      "commentDateMs": 1773069800625,
+      "likes": 0,
+      "text": "If they were planning to I would strongly recommend against it. AI progress in China has been taken up as an ideological good so opposing it is not in any way safe. If you're interested in pushing AI safety in China the best route is likely to read the political guidance on it and make intellectual and advocacy contributions in that direction. Fifty Stalins and all that."
+    },
     {
       "postUrl": "https://www.astralcodexten.com/p/open-thread-421",
       "postTitle": "Open Thread 421",
