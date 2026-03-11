@@ -1,9 +1,23 @@
 {
-  "generatedAt": "2026-03-10T14:04:44.035Z",
+  "generatedAt": "2026-03-11T14:09:22.338Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 5,
+  "count": 3,
   "rows": [
+    {
+      "postUrl": "https://www.astralcodexten.com/p/last-rights",
+      "postTitle": "Last Rights",
+      "postId": 190585065,
+      "commentId": 226239613,
+      "topLevelCommentId": "226239613",
+      "parentCommentId": null,
+      "commentUrl": "https://www.astralcodexten.com/p/last-rights/comment/226239613",
+      "topLevelCommentUrl": "https://www.astralcodexten.com/p/last-rights/comment/226239613",
+      "parentCommentUrl": null,
+      "commentDateMs": 1773237747812,
+      "likes": 0,
+      "text": "The idea is interesting and might be good but the actual analysis in this post is bad in a few ways. Firstly, you took jabs at Republicans. This will be noticed if it ever gains traction and the political economy you propose is fairly simplistic. A lot of the things you want to change are things some people want to actively preserve.\n\nSecondly, your legal analysis is spotty. There is no form of Constitutional theory that says \"we look at what they intended to do and modify the wording to mean that.\" The description of textualism and originalism is faulty too. You don't even bring up purposivism or contextualism or the other ideas that are closer. And the idea they've never been in conflict is very wrong.\n\nYou also don't grapple with the fact that Congress's unpopularity is a collective action problem. Individual congresspeople can poll pretty well. It's Congress collectively that polls poorly. Basically people like their representatives and dislike the other side's. That's the point.\n\nAlso, assuming costs increase proportionally the big house would cost about $10 billion a year which someone would bring up. By the way, you get a pension after five years of serving. Assuming it approaches the maximum (ie, people cycle out) you might end up with six figures of people drawing pensions. I don't think this is a good argument but someone would bring it up. What might be a better argument is if salaries go down you end up with it becoming a rich person's hobby club.\n\nLastly, you don't deal with the fact Congress WAS increasing steadily until the Permanent Apportionment Act of 1929. You could simply repeal that without needing a constitutional amendment. But also this is kind of a problem for your theory of change. The representatives per people was steadily increasing but it changed about 10x from 1787 to 1929 (so about 7% per year) and from 1929 to 2025 about 3x (so about 3% per year). The growth has actually slowed."
+    },
     {
       "postUrl": "https://www.astralcodexten.com/p/open-thread-424",
       "postTitle": "Open Thread 424",
@@ -31,48 +45,6 @@
       "commentDateMs": 1771301346247,
       "likes": 0,
       "text": "Devereaux has argued for years that giving more money to the humanities would make it less limited/biased/left wing. He has a conflict of interest there since he's left wing and would like to get a tenured professorship (though that's unlikely at this point). He's also kind of ignoring that universities can, and do, turn down funding from politically aligned groups they disagree with. For some (but not the majority) of universities this includes fairly mainstream right wing ones. You can get more universities to accept scholar-activist money than for a professor teaching western civ."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe",
-      "postTitle": "Political Backflow From Europe",
-      "postId": 182110210,
-      "commentId": 213234562,
-      "topLevelCommentId": "213234562",
-      "parentCommentId": null,
-      "commentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213234562",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213234562",
-      "parentCommentUrl": null,
-      "commentDateMs": 1770841815728,
-      "likes": 0,
-      "text": "I have a simpler explanation. America simply has more politics. Yes, every nation has a government. But America has more elected offices than Europe and spends far more on elections and has far longer cycles and has more subsidiarity (meaning there's more relevant stories at different levels). Further, those politics are more impactful on other countries than other countries are on the US.\n\nDo you know how long a UK election lasts? One to two months. Do you know how much they cost? A bit less than £100 million. How much news does that produce compared to an American multiyear multibillion monstrosity? And the UK doesn't really have (relevant) local governments the way the US has states. You sometimes see American professional campaigners go to Europe because they have experience in a much more intense environment and the latest technology and so are often better trained.\n\nPlus the US has more media and it's better funded than most European counterparts. And it's got contradictions and fights and an ecosystem that feeds on itself and is highly optimized for attention."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe",
-      "postTitle": "Political Backflow From Europe",
-      "postId": 182110210,
-      "commentId": 213595606,
-      "topLevelCommentId": "213234562",
-      "parentCommentId": 213523322,
-      "commentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213595606",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213234562",
-      "parentCommentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213523322",
-      "commentDateMs": 1770912947095,
-      "likes": 0,
-      "text": "I agree in principle. But what I'd add is that American culture specifically produces a lot of political content because it's a larger industry here."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe",
-      "postTitle": "Political Backflow From Europe",
-      "postId": 182110210,
-      "commentId": 213594919,
-      "topLevelCommentId": "213234562",
-      "parentCommentId": 213330731,
-      "commentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213594919",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213234562",
-      "parentCommentUrl": "https://www.astralcodexten.com/p/political-backflow-from-europe/comment/213330731",
-      "commentDateMs": 1770912861413,
-      "likes": 0,
-      "text": "Somewhat. But a thicker ecosystem is still relevant."
     }
   ]
 }
