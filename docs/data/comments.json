@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-04-02T14:23:51.671Z",
+  "generatedAt": "2026-04-03T14:04:28.253Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 5,
+  "count": 4,
   "rows": [
     {
       "postUrl": "https://www.astralcodexten.com/p/open-thread-426",
@@ -59,20 +59,6 @@
       "commentDateMs": 1773237747812,
       "likes": 0,
       "text": "The idea is interesting and might be good but the actual analysis in this post is bad in a few ways. Firstly, you took jabs at Republicans. This will be noticed if it ever gains traction and the political economy you propose is fairly simplistic. A lot of the things you want to change are things some people want to actively preserve.\n\nSecondly, your legal analysis is spotty. There is no form of Constitutional theory that says \"we look at what they intended to do and modify the wording to mean that.\" The description of textualism and originalism is faulty too. You don't even bring up purposivism or contextualism or the other ideas that are closer. And the idea they've never been in conflict is very wrong.\n\nYou also don't grapple with the fact that Congress's unpopularity is a collective action problem. Individual congresspeople can poll pretty well. It's Congress collectively that polls poorly. Basically people like their representatives and dislike the other side's. That's the point.\n\nAlso, assuming costs increase proportionally the big house would cost about $10 billion a year which someone would bring up. By the way, you get a pension after five years of serving. Assuming it approaches the maximum (ie, people cycle out) you might end up with six figures of people drawing pensions. I don't think this is a good argument but someone would bring it up. What might be a better argument is if salaries go down you end up with it becoming a rich person's hobby club.\n\nLastly, you don't deal with the fact Congress WAS increasing steadily until the Permanent Apportionment Act of 1929. You could simply repeal that without needing a constitutional amendment. But also this is kind of a problem for your theory of change. The representatives per people was steadily increasing but it changed about 10x from 1787 to 1929 (so about 7% per year) and from 1929 to 2025 about 3x (so about 3% per year). The growth has actually slowed."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/open-thread-424",
-      "postTitle": "Open Thread 424",
-      "postId": 190384458,
-      "commentId": 225281649,
-      "topLevelCommentId": "225233699",
-      "parentCommentId": 225233699,
-      "commentUrl": "https://www.astralcodexten.com/p/open-thread-424/comment/225281649",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/open-thread-424/comment/225233699",
-      "parentCommentUrl": "https://www.astralcodexten.com/p/open-thread-424/comment/225233699",
-      "commentDateMs": 1773069800625,
-      "likes": 0,
-      "text": "If they were planning to I would strongly recommend against it. AI progress in China has been taken up as an ideological good so opposing it is not in any way safe. If you're interested in pushing AI safety in China the best route is likely to read the political guidance on it and make intellectual and advocacy contributions in that direction. Fifty Stalins and all that."
     }
   ]
 }
