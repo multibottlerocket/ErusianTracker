@@ -1,7 +1,36 @@
 {
-  "generatedAt": "2026-08-23T13:37:46.997Z",
+  "generatedAt": "2026-08-24T13:56:09.099Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 0,
-  "rows": []
+  "count": 2,
+  "rows": [
+    {
+      "postUrl": "https://www.astralcodexten.com/p/open-thread-448",
+      "postTitle": "Open Thread 448",
+      "postId": 212476790,
+      "commentId": 321330395,
+      "topLevelCommentId": "321325333",
+      "parentCommentId": 321325333,
+      "commentUrl": "https://www.astralcodexten.com/p/open-thread-448/comment/321330395",
+      "topLevelCommentUrl": "https://www.astralcodexten.com/p/open-thread-448/comment/321325333",
+      "parentCommentUrl": "https://www.astralcodexten.com/p/open-thread-448/comment/321325333",
+      "commentDateMs": 1787547709885,
+      "likes": 0,
+      "text": "The Congressional Progressive Caucus has been around since the 1990s. We forget this but the AOC route of radical->mainstream has a bunch of antecedents. A lot of this playbook actually comes out of the original PC era. The Democrat Party hasn't so much gained a larger left flank as lost its right flank. I mean there's been a slight increase but from ~77 to ~96 representatives. Same with other offices.\n\nIf you mean the DSA a lot of that was Bernie. His presidential run failed but he built significant infrastructure. At the same time progressive funding (Soros but also less famous backers like Jurvetson or Hoffman) became more radical and more willing to back outright social candidates. So there was a machine to absorb money and elite backers willing to pour in money. Which is how this works. Political influence comes from people putting in the legwork but money lets them do it professionally.\n\nDespite this, in my view, the DSA/socialists actually underperformed. Pelosi's comment a glass of water with a D next to it could win in New York and that the Squad is four people remain true. New York has always been the DSA heartland anyway and their wins were mostly in deep blue areas of NY, PA, and MI. And one in Colorado. But there's a well heeled staffer class and they're very good at social media. Unfortunately many of them are not very good at, uh, politics. They have significant issues with bubble thinking and in translating that money into broad victories, partly due to litmus tests. And this is currently driving a split between the relatively more pragmatic AOC and Jayapal types and the radical to their left.\n\nBut the consensus news cycle, even among progressives, has been that the DSA and socialists have underperformed. (The socialists insist they did well against expectations and/or the mainstream party sabotaged them.) I think it's partly due to bad candidate quality in some races. Platner and Hong most famously. Platner in particular caused some significant dressing downs of the more radical progressives. But it's also just they're not as popular as some people imagine. El-Sayed, who is also underperforming, notably avoids the label entirely. The entire \"wave\" is like seven people in deep blue seats and that assumes they all win their generals."
+    },
+    {
+      "postUrl": "https://www.astralcodexten.com/p/open-thread-448",
+      "postTitle": "Open Thread 448",
+      "postId": 212476790,
+      "commentId": 321324425,
+      "topLevelCommentId": "321324425",
+      "parentCommentId": null,
+      "commentUrl": "https://www.astralcodexten.com/p/open-thread-448/comment/321324425",
+      "topLevelCommentUrl": "https://www.astralcodexten.com/p/open-thread-448/comment/321324425",
+      "parentCommentUrl": null,
+      "commentDateMs": 1787546454210,
+      "likes": 0,
+      "text": "I'll be talking to {governor} about {stuff} next month. I don't want to overstate the importance of this. Think less \"secret whispering in their ear\" and more \"they want a wide range of opinions on some topics.\" But if anyone has anything about AI or data centers worth saying I'd be interested in canvassing opinions. It will be more a chat than a presentation."
+    }
+  ]
 }
