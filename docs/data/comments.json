@@ -1,64 +1,7 @@
 {
-  "generatedAt": "2026-09-23T17:48:21.509Z",
+  "generatedAt": "2026-09-24T17:49:36.945Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 4,
-  "rows": [
-    {
-      "postUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness",
-      "postTitle": "Re: Re: Re: Pritchard On Liberal Happiness",
-      "postId": 212354052,
-      "commentId": 322007270,
-      "topLevelCommentId": "322007270",
-      "parentCommentId": null,
-      "commentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/322007270",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/322007270",
-      "parentCommentUrl": null,
-      "commentDateMs": 1787624963219,
-      "likes": 0,
-      "text": "Some GSS work I did recently mostly reduced the decline in happiness down to a lack of social contact and people thinking life is less exciting. It's not all of it but it's a lot."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness",
-      "postTitle": "Re: Re: Re: Pritchard On Liberal Happiness",
-      "postId": 212354052,
-      "commentId": 322005354,
-      "topLevelCommentId": "321944167",
-      "parentCommentId": 321948029,
-      "commentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/322005354",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/321944167",
-      "parentCommentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/321948029",
-      "commentDateMs": 1787624685235,
-      "likes": 0,
-      "text": "Yeah. Prosperity, national product, national wealth. The term has changed but economic expansion has been a political object since before the US was a country. The American Revolutionaries were writing about economic restrictions. Franklin has a very sarcastic letter about British restrictions on American industry."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness",
-      "postTitle": "Re: Re: Re: Pritchard On Liberal Happiness",
-      "postId": 212354052,
-      "commentId": 322272043,
-      "topLevelCommentId": "321944167",
-      "parentCommentId": 322119856,
-      "commentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/322272043",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/321944167",
-      "parentCommentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/322119856",
-      "commentDateMs": 1787664674661,
-      "likes": 0,
-      "text": "Yeah. So did Hamilton. Jefferson and Hamilton were partly arguing over which way of organizing the economy would create more wealth with Jefferson eventually arguing that even if his way didn't it was better for democracy. Though he never quite gave up the idea his way was better economically. Pursuit of happiness is a direct reference to property because they didn't want to use the word property because it was felt to be a reference to slaves. Etc."
-    },
-    {
-      "postUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness",
-      "postTitle": "Re: Re: Re: Pritchard On Liberal Happiness",
-      "postId": 212354052,
-      "commentId": 322607747,
-      "topLevelCommentId": "321944167",
-      "parentCommentId": 322573913,
-      "commentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/322607747",
-      "topLevelCommentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/321944167",
-      "parentCommentUrl": "https://www.astralcodexten.com/p/re-re-re-pritchard-on-liberal-happiness/comment/322573913",
-      "commentDateMs": 1787693115925,
-      "likes": 0,
-      "text": "So the original Lockean formulation was \"life, liberty, and property.\" While there's various reasons given for why it might have been changed the slavery debate did reference it. So did the idea you might have a right to property rather than your own."
-    }
-  ]
+  "count": 0,
+  "rows": []
 }
