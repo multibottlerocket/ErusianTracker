@@ -1,7 +1,22 @@
 {
-  "generatedAt": "2026-09-28T20:04:39.562Z",
+  "generatedAt": "2026-09-29T18:33:35.276Z",
   "substackUrl": "https://www.astralcodexten.com",
   "username": "Erusian",
-  "count": 0,
-  "rows": []
+  "count": 1,
+  "rows": [
+    {
+      "postUrl": "https://www.astralcodexten.com/p/open-thread-453",
+      "postTitle": "Open Thread 453",
+      "postId": 217850009,
+      "commentId": 348433658,
+      "topLevelCommentId": "348237746",
+      "parentCommentId": 348237746,
+      "commentUrl": "https://www.astralcodexten.com/p/open-thread-453/comment/348433658",
+      "topLevelCommentUrl": "https://www.astralcodexten.com/p/open-thread-453/comment/348237746",
+      "parentCommentUrl": "https://www.astralcodexten.com/p/open-thread-453/comment/348237746",
+      "commentDateMs": 1790663595624,
+      "likes": 0,
+      "text": "It's not true in effect. The famous example here is Dodge v. Ford Motor Co. where Ford wanted to retain profits rather than distributing them as dividends. That's the case where Ford was required to pay dividends and it was immediately taken up by anti-capitalists. It's where the quote that corporations exist primarily for the owners comes from.\n\nHowever, the reality is that Ford basically grandstanded. His lawyers tried to argue he was being a good steward of the business and concerned with employee retention, funding expansion, etc. Ford then walked in and basically said he thought the company was making too much money, that he thought they should direct resources toward (what he thought of) as the general good, etc. This threw the case and he lost. If the court had found for him then they would have been ratifying that corporate leadership could decide investor's assets could be appropriated to their own causes. The court said: no, you are stewarding their money and have a duty to increase the value of their capital because it's theirs, not yours.\n\n\"An executive is summoned before the board of a small, publicly traded company. A report from the marketing and UX teams predicts that eschewing a click-to-cancel design would increase revenue by 10%. The young CEO, an MBA from BYU, refuses to implement this design on ethical (but not religious) grounds. The board fires him, replacing him with someone without qualms. The former CEO's career is ruined, and he has no legal recourse against the board.\"\n\nThis is strange to me. No CEO has legal recourse against the board for being fired in most cases. Average employees also don't get to sue their employers if they're fired for ethical disagreements. The actual relevant case law is that the MBA can just say: \"I believe ethical practices will, over the long term, increase the value of the business\" and it's allowed."
+    }
+  ]
 }
